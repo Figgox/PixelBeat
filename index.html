@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Pixel Beat</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="screen" width="960" height="540"></canvas>
+<!-- Plain scripts (no modules) so index.html still works when opened straight from disk.
+     They share one global scope, so the order matters: each file may use only what loads before it,
+     apart from functions that are called later at runtime. main.js starts the game and must load last. -->
+<script src="js/audio.js"></script>        <!-- synth: instruments, menu sounds -->
+<script src="js/config.js"></script>       <!-- constants, charts, chords -->
+<script src="js/gfx.js"></script>          <!-- canvas, pixel font, drawing helpers, particles -->
+<script src="js/backgrounds.js"></script>  <!-- sun and grid backdrop -->
+<script src="js/theme.js"></script>        <!-- menu music -->
+<script src="js/state.js"></script>        <!-- game state, building a run -->
+<script src="js/mode-call.js"></script>    <!-- Call & Response -->
+<script src="js/mode-bounce.js"></script>  <!-- Bounce -->
+<script src="js/mode-twin.js"></script>    <!-- Twin Tap -->
+<script src="js/game.js"></script>         <!-- engine: scheduling, judging, scoring -->
+<script src="js/menus.js"></script>        <!-- pause, settings, calibration -->
+<script src="js/input.js"></script>        <!-- keyboard and pointer -->
+<script src="js/screens.js"></script>      <!-- drawing of every screen -->
+<script src="js/main.js"></script>         <!-- update loop; starts everything -->
+</body>
+</html>

@@ -1,0 +1,5 @@
+# keep the build context to the game itself
+.claude
+serve.ps1
+Dockerfile
+.dockerignore
