@@ -26,6 +26,7 @@ const CHORDS = [
   { r: 49, n: [196, 246.94, 293.66] },
 ];
 const W_PERF = 0.045, W_GOOD = 0.09, W_BAD = 0.15; // seconds
+const BOUNCE_DELAY_MS = 40; // extra built-in delay for bounce: presses count this much later
 const POINTS = { perfect: 100, good: 60, bad: 20 };
 const WEIGHT = { perfect: 1, good: 0.7, bad: 0.35, miss: 0 };
 const MODES = ['CALL & RESPONSE', 'BOUNCE', 'TWIN TAP'];

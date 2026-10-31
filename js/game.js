@@ -72,7 +72,7 @@ function pressClock(e) {
     const lag = (performance.now() - e.timeStamp) / 1000;
     if (lag >= 0 && lag < 0.2) t -= lag;
   }
-  return t - Snd.latency + offsetMs / 1000; // positive offset = presses count as later
+  return t - Snd.latency + (offsetMs + (mode === 1 ? BOUNCE_DELAY_MS : 0)) / 1000; // positive offset = presses count as later
 }
 
 // ---------- input ----------
