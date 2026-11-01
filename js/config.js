@@ -11,6 +11,7 @@ const C = {
 const MODE_BPM = [120, 128, 140, 160];
 let SPB = 60 / MODE_BPM[0]; // seconds per beat; follows the current mode's tempo (see setTempo)
 const EXTRA_BPM = [150, 160, 175, 190]; // the EXTRA challenge: the same games, faster
+const setMenuTempo = () => { SPB = 60 / MODE_BPM[0]; }; // the menu music always plays at the normal tempo, EXTRA or not
 const setTempo = m => { SPB = 60 / (extra ? EXTRA_BPM : MODE_BPM)[m]; };
 const noteHz = n => { // 'F#5' -> 739.99, 'Bb4' -> 466.16
   const [, letter, acc, oct] = n.match(/^([A-G])([#b]?)(\d)$/);
@@ -56,6 +57,7 @@ const MENU_HINT = ['CHOOSE A GAME AND PLAY.', 'DELAY, VOLUME AND CALIBRATION.', 
 // Progression: each mode unlocks once the one before it has been cleared with at least this rank.
 const RANKS = ['F', 'D', 'C', 'B', 'A', 'S', 'S+'];
 const UNLOCK_RANK = RANKS.indexOf('C');
+const HIT_COL = '#fff200'; // PERFECT, GOOD and OK all pop in the same colour, so only the word tells them apart
 const RANK_COL = { 'S+': '#fff200', S: '#fff200', A: '#39ff14', B: '#00f0ff', C: '#ff2bd6', D: '#b79cff', F: '#ff3355' };
 const MODE_HINT = [
   'LISTEN TO THE BOT. THEN REPEAT IT ON THE BEAT.',

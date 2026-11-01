@@ -183,7 +183,7 @@ function judge(n, d) {
   S.combo = j === 'bad' ? 0 : S.combo + 1;
   S.maxCombo = Math.max(S.maxCombo, S.combo);
   S.score += Math.round(POINTS[j] * (1 + Math.min(S.combo, 20) / 20));
-  const label = { perfect: ['PERFECT', C.yel], good: ['GOOD', C.cyan], bad: ['OK', '#b79cff'] }[j];
+  const label = { perfect: ['PERFECT', HIT_COL], good: ['GOOD', HIT_COL], bad: ['OK', HIT_COL] }[j];
   pops.push({ t: label[0], col: label[1], life: 0.7, sub: j === 'perfect' ? '' : (d < 0 ? 'EARLY' : 'LATE'), ...popSpot() });
   const sp = hitSpot(n);
   if (j === 'perfect') burst(sp.x, sp.y, C.yel, 10);

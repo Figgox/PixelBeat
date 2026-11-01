@@ -13,14 +13,12 @@ function enterMenu() {
 function goMenu() {
   if (!extra && S.unlockMsg === 'EXTRA') { scene = 'menu'; menuSel = EXTRA_ITEM; } // land on the newly unlocked EXTRA
   else scene = 'select';
-  setTempo(0); // the menu theme is always at the first mode's tempo
+  setMenuTempo();
   Theme.start();
 }
-// enter or leave EXTRA; the menu theme restarts because its tempo changes
+// enter or leave EXTRA; the menu music just keeps playing at its normal tempo
 function setExtra(on) {
   extra = on;
-  Theme.stop();
-  setTempo(0);
   scene = on ? 'select' : 'menu';
   if (on) modeSel = 0; else menuSel = EXTRA_ITEM;
   menuFlash = 1;
