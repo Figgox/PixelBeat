@@ -71,11 +71,7 @@ function drawMenu() {
   rows.forEach((r, i) => {
     const sel = i === menuSel, hw = (r.label.length * 8 - 2) / 2;
     let col = sel ? C.yel : C.white;
-    if (i === EXTRA_ITEM) { // the glowing EXTRA option
-      const pulse = 0.5 + 0.5 * Math.sin(menuT * 5);
-      g.globalAlpha = 0.12 + 0.28 * pulse; rect(r.x, r.y - 3, r.w, 15, C.mag); g.globalAlpha = 1;
-      if (!sel) col = mix(C.yel, C.white, pulse);
-    }
+    if (i === EXTRA_ITEM) col = mix(C.yel, C.white, 0.5 + 0.5 * Math.sin(menuT * 5)); // the EXTRA option glows gold
     text(r.label, 160, r.y, col, 2, 'center');
     if (sel) { text('>', 160 - hw - 12, r.y, C.yel, 2); text('<', 160 + hw + 6, r.y, C.yel, 2); }
   });
