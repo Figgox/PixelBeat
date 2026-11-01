@@ -154,6 +154,25 @@ const Snd = (() => {
     },
 
     tick(t) { tone('sine', 1500, t, 0.002, 0.16, 0.05); }, // soft marker for each bounce landing
+    pock(t) { // a ping pong ball off a paddle: a hollow knock with a click on top
+      const o = tone('sine', 1300, t, 0.001, 0.35, 0.05);
+      o.frequency.exponentialRampToValueAtTime(700, t + 0.05);
+      noiseHit(t, 'bandpass', 3500, 2, 0.25, 0.02);
+    },
+    tock(t) { tone('sine', 900, t, 0.001, 0.18, 0.035); noiseHit(t, 'bandpass', 2500, 2, 0.12, 0.015); }, // the ball on the table
+    cheer(t) { // a crowd roar: a swell of broad noise, kept low so the next tocks still cut through
+      const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = envGain(t, 0.12, 0.15, 0.9);
+      s.buffer = noise;
+      s.loop = true;
+      f.type = 'bandpass';
+      f.frequency.value = 1100;
+      f.Q.value = 0.6;
+      s.connect(f);
+      f.connect(g);
+      g.connect(master);
+      s.start(t, Math.random() * 0.5);
+      s.stop(t + 1.1);
+    },
     beep(t, freq) { tone('square', freq, t, 0.003, 0.18, 0.12, lowpassed(3000)); },
 
     buzz(t) {

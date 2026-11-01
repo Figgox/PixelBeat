@@ -38,24 +38,25 @@ function doubleFx() {
 
 const demoFlash = [0, 0]; // twin demo: core halves lighting up as pulses arrive
 
-// twin tap demo: a small core on the lane under the mode list; the melody's two voices arrive as pulses
-function drawTwinDemo(bp) {
-  const cx = 160, cy = DEMO_Y, sideCol = [C.cyan, C.mag];
+// twin tap demo: a small core of radius r centred on (cx, cy); the melody's two voices arrive as pulses
+function drawTwinDemo(bp, cx, cy, r) {
+  const sideCol = [C.cyan, C.mag];
   g.globalAlpha = 0.35; rect(0, cy, W, 1, '#8a7ab0'); g.globalAlpha = 1;
   for (const n of Theme.notesBetween(bp - 0.3, bp + 2.6)) {
     const side = n.who === 'cpu' ? 0 : 1, dir = side ? 1 : -1, d = (n.beat - bp) * TWIN_PX, x = cx + dir * d;
-    if (d < 6) continue; // already hit
+    if (d < r) continue; // already hit
     for (let k = 3; k >= 1; k--) { g.globalAlpha = 0.5 - k * 0.12; diamond(x + dir * k * 7, cy, 3, sideCol[side]); }
     g.globalAlpha = 1;
     diamond(x, cy, 5, sideCol[side]);
     diamond(x, cy, 2, C.white);
   }
-  for (let dy = -6; dy <= 6; dy++) {
-    const hw = Math.round(6 * Math.sqrt(1 - (dy / 6) * (dy / 6)));
+  for (let dy = -r; dy <= r; dy++) {
+    const hw = Math.round(r * Math.sqrt(1 - (dy / r) * (dy / r)));
     rect(cx - hw, cy + dy, hw, 1, demoFlash[0] > 0.4 ? C.white : C.cyan);
     rect(cx, cy + dy, hw, 1, demoFlash[1] > 0.4 ? C.white : C.mag);
   }
-  disc(cx, cy, 2, 2, '#12062a');
+  disc(cx, cy, Math.round(r / 3), Math.round(r / 3), '#12062a');
+  rect(cx, cy - r, 1, r * 2 + 1, '#12062a'); // the split between the halves, as on the real core
 }
 
 // ---------- twin tap scene ----------

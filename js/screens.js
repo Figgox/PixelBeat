@@ -3,7 +3,7 @@
 
 function drawHud(bp) {
   text('SCORE ' + String(S.score).padStart(6, '0'), 6, 6, C.white, 1);
-  if (S.combo >= 3) text(S.combo + ' COMBO', W - 6, 6, C.yel, 1, 'right');
+  if (S.combo >= 3) text(S.combo + (mode === 3 ? ' RALLY' : ' COMBO'), W - 6, 6, C.yel, 1, 'right');
   rect(0, 0, W, 2, '#1d1038');
   rect(0, 0, Math.round(W * Math.max(0, Math.min(1, bp / S.endBeat))), 2, C.cyan);
 
@@ -22,6 +22,8 @@ function drawHud(bp) {
     if (bp < 6) text('TAP WHEN IT LANDS', 160, 22, C.cyan, 1, 'center');
   } else if (mode === 2) {
     if (bp < 8) text('LEFT: < OR A     RIGHT: > OR D', 160, 22, C.cyan, 1, 'center');
+  } else if (mode === 3) {
+    if (bp < 8) text('HIT IT BACK AS IT REACHES YOUR PADDLE', 160, 22, C.cyan, 1, 'center');
   } else if (c < 4) {
     text('LISTEN', 160, 24, C.cyan, 2, 'center');
   } else {
@@ -51,49 +53,83 @@ function drawTitle() {
   if (Math.floor(menuT * 2) % 2 === 0) text('PRESS ANY KEY', 160, 100, C.white, 2, 'center');
 }
 
+// main menu: the logo and robots, with PLAY and SETTINGS between them
 function drawMenu() {
-  const bp = menuBeat();
-  // the backdrop previews whichever mode is highlighted; a locked one shows only drifting padlocks
-  const lockedSel = isLockedMode(modeSel);
-  if (lockedSel) drawLockedBackground(bp);
-  else if (modeSel === SETTINGS_ROW) drawGearBackground(bp);
-  else if (modeSel === 1) drawBounceBackground(bp);
-  else if (modeSel === 2) drawTwinBackground(bp);
-  else drawBackground(bp);
-  if (menuFlash > 0) { g.globalAlpha = menuFlash * 0.7; rect(0, 0, W, H, '#000'); g.globalAlpha = 1; } // quick dip when the selection changes
-  if (lockedSel) {
-    // nothing of the game shows through
-  } else if (modeSel === 1) {
-    drawBounce(bp, demoPath(bp), DEMO_X);
-  } else if (modeSel === 2) {
-    drawTwinDemo(bp);
-  } else if (modeSel === 0) { // the robots belong to Call & Response; Settings (row 3) shows only the gears
+  const bp = menuBeat(), settings = menuSel === 1;
+  if (settings) drawGearBackground(bp); else drawBackground(bp);
+  if (menuFlash > 0) { g.globalAlpha = menuFlash * 0.7; rect(0, 0, W, H, '#000'); g.globalAlpha = 1; } // quick dip when the backdrop changes
+  if (!settings) { // the robots stay with PLAY; SETTINGS shows only the gears
     drawBot(cpu, bp, true);
     drawBot(player, bp + 0.5, true);
   }
   drawParts();
   drawLogo();
 
-  if (!lockedSel && Math.floor(menuT * 2) % 2 === 0) text(modeSel === SETTINGS_ROW ? 'PRESS SPACE TO OPEN' : 'PRESS SPACE TO START', 160, 82, C.white, 2, 'center');
-  g.globalAlpha = 0.65; rect(98, 103, 124, 41, '#07030f'); g.globalAlpha = 1; // stays clear of the robots on either side
-  [...MODES, 'SETTINGS'].forEach((m, i) => {
-    const sel = i === modeSel, y = i === SETTINGS_ROW ? 135 : 107 + i * 9;
-    const isMode = i < MODES.length, locked = isLockedMode(i);
-    const col = locked ? (sel ? '#8a7ab0' : '#4a3a7a') : (sel ? C.yel : C.white);
-    text((sel ? '> ' : '  ') + m, 102, y, col, 1);
-    if (locked) drawPadlock(211, y - 1, 1, col); // a padlock where the best rank would be
-    else if (isMode && bestRanks[i] >= 0) text(RANKS[bestRanks[i]], 218, y, RANK_COL[RANKS[bestRanks[i]]], 1, 'right'); // best rank so far
+  g.globalAlpha = 0.65; rect(108, 92, 104, 38, '#07030f'); g.globalAlpha = 1; // stays clear of the robots on either side
+  menuRows().forEach((r, i) => {
+    const sel = i === menuSel, hw = (r.label.length * 8 - 2) / 2;
+    text(r.label, 160, r.y, sel ? C.yel : C.white, 2, 'center');
+    if (sel) { text('>', 160 - hw - 12, r.y, C.yel, 2); text('<', 160 + hw + 6, r.y, C.yel, 2); }
   });
   g.globalAlpha = 0.65; rect(0, 156, W, 24, '#07030f'); g.globalAlpha = 1;
-  if (modeSel === SETTINGS_ROW) text('DELAY, VOLUME AND CALIBRATION.', 160, 159, '#b79cff', 1, 'center');
-  else if (modeSel >= PLAYABLE) text('THIS MODE IS STILL IN THE WORKS.', 160, 159, '#b79cff', 1, 'center');
+  text(MENU_HINT[menuSel], 160, 159, '#b79cff', 1, 'center');
+  text('OFFSET ' + signed(offsetMs) + ' MS  <LEFT/RIGHT>', 160, 169, '#8a7ab0', 1, 'center');
+}
+
+// ---------- game select ----------
+// Each thumbnail is a live 1:1 crop of its game's scene (x, y: the crop's top left), playing along with the menu theme.
+const THUMBS = [
+  { x: 124, y: 76, draw: bp => { drawBackground(bp); drawBot({ ...cpu, cx: 142 }, bp, true); drawBot({ ...player, cx: 178 }, bp + 0.5, true); } },
+  { x: 140, y: 84, draw: bp => { drawBounceBackground(bp); drawBounce(bp, demoPath(bp), 162); } },
+  { x: 124, y: 92, draw: bp => { drawTwinBackground(bp); drawTwinDemo(bp, 160, 130, 10); } },
+  { x: 124, y: 76, draw: bp => { drawPongBackground(bp, false); drawPong(bp, pongDemoShots(bp), PONG_MINI); } },
+];
+
+function drawThumb(i, x, y, bp) {
+  const t = THUMBS[i];
+  g.save();
+  g.beginPath(); g.rect(x, y, CARD_W, CARD_H); g.clip();
+  g.translate(x - t.x, y - t.y);
+  if (isLockedMode(i)) { // nothing of the game shows through, just a padlock
+    drawLockedBackground(bp);
+    drawPadlock(t.x + CARD_W / 2 - 10, t.y + CARD_H / 2 - 12, 3, '#8a7ab0');
+  } else t.draw(bp);
+  g.restore();
+}
+
+function drawSelect() {
+  const bp = menuBeat();
+  drawBackground(bp);
+  g.globalAlpha = 0.6; rect(0, 0, W, H, '#05020c'); g.globalAlpha = 1;
+  text('SELECT GAME', 161, 9, C.mag, 2, 'center');
+  text('SELECT GAME', 160, 8, C.cyan, 2, 'center');
+  text('< BACK', 6, 6, '#8a7ab0', 1);
+
+  gameCards().forEach((c, i) => {
+    const sel = i === modeSel, locked = isLockedMode(i), y = c.y - (sel ? 2 : 0); // the highlighted card lifts a little
+    drawThumb(i, c.x, y, bp);
+    if (!sel) { g.globalAlpha = 0.5; rect(c.x, y, c.w, c.h, '#05020c'); g.globalAlpha = 1; }
+    else if (menuFlash > 0) { g.globalAlpha = menuFlash * 0.4; rect(c.x, y, c.w, c.h, C.white); g.globalAlpha = 1; }
+    g.strokeStyle = sel ? C.yel : '#4a3a7a'; g.lineWidth = 1;
+    g.strokeRect(c.x - 0.5, y - 0.5, c.w + 1, c.h + 1);
+    if (!locked && bestRanks[i] >= 0) { // best rank so far, in the corner
+      const r = RANKS[bestRanks[i]], w = r.length * 4 + 3;
+      rect(c.x + c.w - w - 2, y + 2, w, 9, '#07030f');
+      text(r, c.x + c.w - 4, y + 4, RANK_COL[r], 1, 'right');
+    }
+    text(c.title, c.x + c.w / 2, c.y + c.h + 5, locked ? (sel ? '#8a7ab0' : '#4a3a7a') : (sel ? C.yel : '#b79cff'), 1, 'center');
+  });
+
+  if (modeSel >= PLAYABLE) text('THIS MODE IS STILL IN THE WORKS.', 160, 134, '#b79cff', 1, 'center');
   else if (!isUnlocked(modeSel)) {
     const msg = 'GET A C OR BETTER IN ' + MODES[modeSel - 1] + '.', x0 = 160 - Math.round((msg.length * 4 - 1) / 2);
-    drawPadlock(x0 - 11, 158, 1, '#ff6b8a');
-    text(msg, x0, 159, '#ff6b8a', 1);
+    drawPadlock(x0 - 11, 133, 1, '#ff6b8a');
+    text(msg, x0, 134, '#ff6b8a', 1);
+  } else {
+    text(MODE_HINT[modeSel], 160, 134, '#b79cff', 1, 'center');
+    text('BEST ' + bests[modeSel], 160, 146, '#8a7ab0', 1, 'center');
   }
-  else text(MODE_HINT[modeSel], 160, 159, '#b79cff', 1, 'center');
-  text('OFFSET ' + signed(offsetMs) + ' MS  <LEFT/RIGHT>' + (modeSel < MODES.length ? '   BEST ' + bests[modeSel] : ''), 160, 169, '#8a7ab0', 1, 'center');
+  text('<LEFT/RIGHT> CHOOSE    SPACE: PLAY    ESC: BACK', 160, 168, '#8a7ab0', 1, 'center');
 }
 
 // ---------- settings and calibration screens ----------
@@ -154,18 +190,21 @@ function drawCalibration() {
 }
 
 function drawPlay() {
-  const bp = (visClock() - S.T0) / SPB;
+  const bp = beatAt(visClock() - S.T0);
   g.save();
   if (S.shake > 0) g.translate(Math.round((Math.random() - 0.5) * 6 * S.shake * 4), Math.round((Math.random() - 0.5) * 4 * S.shake * 4)); // scene shake; the HUD stays put
-  if (mode === 1) drawBounceBackground(bp); else if (mode === 2) drawTwinBackground(bp); else drawBackground(bp);
+  if (mode === 1) drawBounceBackground(bp); else if (mode === 2) drawTwinBackground(bp);
+  else if (mode === 3) drawPongBackground(bp, S.combo >= 10, S.smashBeat); else drawBackground(bp);
   const c = ((bp % 8) + 8) % 8;
   if (mode === 0) {
     drawBot(cpu, bp, bp >= 0 && c < 4);
     drawBot(player, bp, bp >= 0 && c >= 4);
   } else if (mode === 1) {
     drawBounce(bp);
-  } else {
+  } else if (mode === 2) {
     drawTwin(bp);
+  } else {
+    drawPong(bp, S.shots, PONG_GEO, S.swing);
   }
   drawParts();
   g.restore();
@@ -212,7 +251,7 @@ function drawResult() {
     const m = Math.round(Math.abs(ad));
     text('AVG TIMING: ' + (m < 3 ? 'ON BEAT' : m + ' MS ' + (ad < 0 ? 'EARLY' : 'LATE')), 160, 136, C.white, 1, 'center');
     if (S.applied) text('OFFSET NOW ' + (offsetMs >= 0 ? '+' : '') + offsetMs + ' MS', 160, 145, C.grn, 1, 'center');
-    else if (m >= 3) text('O: APPLY AS OFFSET', 160, 145, C.yel, 1, 'center');
+    else if (m >= 3) text(mode === 1 ? 'TO FIX YOUR DELAY: CALIBRATE IN SETTINGS' : 'O: APPLY AS OFFSET', 160, 145, C.yel, 1, 'center');
   }
   text('SPACE: CONTINUE    R: RETRY', 160, 156, C.white, 1, 'center');
 }

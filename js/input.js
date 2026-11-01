@@ -5,7 +5,9 @@ function onAction(e) {
   if (scene === 'title') { enterMenu(); return; }
   Snd.init();
   if (scene === 'menu') {
-    if (modeSel === SETTINGS_ROW) { Snd.uiSelect(); settingsSel = 0; scene = 'settings'; return; }
+    Snd.uiSelect();
+    if (menuSel === 1) { settingsSel = 0; scene = 'settings'; } else scene = 'select';
+  } else if (scene === 'select') {
     if (modeSel >= PLAYABLE) return;
     if (!isUnlocked(modeSel)) Snd.buzz(Snd.ctx.currentTime);
     else { Snd.uiSelect(); mode = modeSel; startGame(); }
@@ -30,11 +32,15 @@ addEventListener('keydown', e => {
   if (scene === 'title') {
     if (!['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) enterMenu();
   } else if (scene === 'menu') {
-    const rows = MODES.length + 1;
-    if (k === 'ArrowUp') { modeSel = (modeSel + rows - 1) % rows; menuFlash = 1; Snd.uiMove(); }
-    else if (k === 'ArrowDown') { modeSel = (modeSel + 1) % rows; menuFlash = 1; Snd.uiMove(); }
+    if (k === 'ArrowUp') moveSelection(-1);
+    else if (k === 'ArrowDown') moveSelection(1);
     else if (k === 'ArrowLeft') adjustOffset(-1);
     else if (k === 'ArrowRight') adjustOffset(1);
+    else if (k === 'Space' || k === 'Enter') onAction(e);
+  } else if (scene === 'select') {
+    if (k === 'ArrowLeft' || k === 'KeyA') moveSelection(-1);
+    else if (k === 'ArrowRight' || k === 'KeyD') moveSelection(1);
+    else if (k === 'Escape' || k === 'Backspace') { Snd.uiBack(); scene = 'menu'; }
     else if (k === 'Space' || k === 'Enter') onAction(e);
   } else if (scene === 'settings') {
     settingsKey(k);
@@ -43,7 +49,7 @@ addEventListener('keydown', e => {
   } else if (scene === 'result') {
     if (k === 'Escape') { Snd.uiBack(); goMenu(); }
     else if (k === 'KeyR') { Snd.uiSelect(); startGame(); }
-    else if (k === 'KeyO' && avgDelta() !== null) {
+    else if (k === 'KeyO' && avgDelta() !== null && mode !== 1) { // Bounce timing mixes in playing habit, so it never sets the offset
       offsetMs = Math.max(-200, Math.min(200, Math.round(offsetMs - avgDelta())));
       save('offset', offsetMs);
       S.applied = true;
@@ -58,12 +64,13 @@ view.addEventListener('pointerdown', e => {
   e.preventDefault();
   if (scene === 'play' && paused) pausePointer(e);
   else if (scene === 'settings') settingsPointer(e);
+  else if (scene === 'menu' || scene === 'select') menuPointer(e);
   else onAction(e);
 });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     togglePause(true);
     Theme.stop(); // timers are throttled in background tabs, so the loop would stutter
-  } else if (scene === 'menu' || scene === 'settings') Theme.start();
+  } else if (scene === 'menu' || scene === 'select' || scene === 'settings') Theme.start();
 });
 
