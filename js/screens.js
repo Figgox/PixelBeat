@@ -71,11 +71,7 @@ function drawMenu() {
   rows.forEach((r, i) => {
     const sel = i === menuSel, hw = (r.label.length * 8 - 2) / 2;
     let col = sel ? C.yel : C.white;
-    if (i === EXTRA_ITEM) { // the glowing EXTRA option
-      const pulse = 0.5 + 0.5 * Math.sin(menuT * 5);
-      g.globalAlpha = 0.12 + 0.28 * pulse; rect(r.x, r.y - 3, r.w, 15, C.mag); g.globalAlpha = 1;
-      if (!sel) col = mix(C.yel, C.white, pulse);
-    }
+    if (i === EXTRA_ITEM) col = mix(C.yel, C.white, 0.5 + 0.5 * Math.sin(menuT * 5)); // the EXTRA option glows gold
     text(r.label, 160, r.y, col, 2, 'center');
     if (sel) { text('>', 160 - hw - 12, r.y, C.yel, 2); text('<', 160 + hw + 6, r.y, C.yel, 2); }
   });
@@ -251,7 +247,7 @@ function drawResult() {
   text('BEST ' + curBests()[mode], 220, 76, '#b79cff', 1, 'center');
   if (S.unlockMsg) text('NEW MODE UNLOCKED: ' + S.unlockMsg + '!', 160, 36, [C.grn, C.yel][Math.floor(menuT * 4) % 2], 1, 'center');
   else text(MODES[mode] + (extra ? ' EXTRA' : ''), 160, 36, extra ? C.yel : '#8a7ab0', 1, 'center');
-  const rows = [['PERFECT', 'perfect', HIT_COL], ['GOOD', 'good', HIT_COL], ['OK', 'bad', HIT_COL], ['MISS', 'miss', C.red]];
+  const rows = [['PERFECT', 'perfect', judgeCol('perfect')], ['GOOD', 'good', judgeCol('good')], ['OK', 'bad', judgeCol('bad')], ['MISS', 'miss', C.red]];
   rows.forEach((r, i) => {
     text(r[0], 100, 100 + i * 8, r[2], 1);
     text(S.counts[r[1]], 220, 100 + i * 8, r[2], 1, 'right');

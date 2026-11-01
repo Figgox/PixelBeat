@@ -57,7 +57,11 @@ const MENU_HINT = ['CHOOSE A GAME AND PLAY.', 'DELAY, VOLUME AND CALIBRATION.', 
 // Progression: each mode unlocks once the one before it has been cleared with at least this rank.
 const RANKS = ['F', 'D', 'C', 'B', 'A', 'S', 'S+'];
 const UNLOCK_RANK = RANKS.indexOf('C');
-const HIT_COL = '#fff200'; // PERFECT, GOOD and OK all pop in the same colour, so only the word tells them apart
+// Judgement colours. EXTRA's hue shift would turn the normal ones into lookalikes (or into the MISS colour), so EXTRA picks its own:
+// these are the colours before the shift, and they come out gold, white and green on screen.
+const JUDGE_COLS = { perfect: C.yel, good: C.cyan, bad: '#b79cff' };
+const XJUDGE_COLS = { perfect: C.grn, good: C.white, bad: C.cyan };
+const judgeCol = j => (extra ? XJUDGE_COLS : JUDGE_COLS)[j];
 const RANK_COL = { 'S+': '#fff200', S: '#fff200', A: '#39ff14', B: '#00f0ff', C: '#ff2bd6', D: '#b79cff', F: '#ff3355' };
 const MODE_HINT = [
   'LISTEN TO THE BOT. THEN REPEAT IT ON THE BEAT.',

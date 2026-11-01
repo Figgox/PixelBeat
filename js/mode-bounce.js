@@ -96,7 +96,8 @@ function ballAt(beat, P = S.path) {
   return { y: a.y + (b.y - a.y) * u - arc - 6, squash: Math.max(0, 1 - near / 0.12) };
 }
 
-const JUDGE_COL = { perfect: HIT_COL, good: HIT_COL, bad: HIT_COL, miss: C.red };
+const JUDGE_COL = { perfect: C.yel, good: C.white, bad: '#b79cff', miss: C.red };
+const padCol = r => (extra && r !== 'miss' ? judgeCol(r) : JUDGE_COL[r]);
 
 // P and bx are only overridden by the menu demo
 function drawBounce(bp, P = S.path, bx = BALL_X) {
@@ -107,7 +108,7 @@ function drawBounce(bp, P = S.path, bx = BALL_X) {
   for (const p of P) {
     const x = xOf(p.beat);
     if (x < -16 || x > W + 16) continue;
-    let col = p.virt ? '#5a4a88' : (p.note && p.note.judged ? JUDGE_COL[p.note.result] : C.cyan);
+    let col = p.virt ? '#5a4a88' : (p.note && p.note.judged ? padCol(p.note.result) : C.cyan);
     if (demo && Math.abs(bp - p.beat) < 0.1) col = C.white; // pad lights up as the ball lands
     g.globalAlpha = 0.25; rect(x, p.y + 4, 1, Math.max(0, 150 - p.y), col); g.globalAlpha = 1; // support beam
     rect(x - 12, p.y, 24, 3, col);
