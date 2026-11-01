@@ -10,7 +10,7 @@ const C = {
 // ---------- level ----------
 const MODE_BPM = [120, 128, 140, 160];
 let SPB = 60 / MODE_BPM[0]; // seconds per beat; follows the current mode's tempo (see setTempo)
-const EXTRA_BPM = [150, 160, 175, 190]; // the EXTRA challenge: the same games, faster
+const EXTRA_BPM = [160, 170, 185, 200]; // the EXTRA challenge: the same games, faster
 const setMenuTempo = () => { SPB = 60 / MODE_BPM[0]; }; // the menu music always plays at the normal tempo, EXTRA or not
 const setTempo = m => { SPB = 60 / (extra ? EXTRA_BPM : MODE_BPM)[m]; };
 const noteHz = n => { // 'F#5' -> 739.99, 'Bb4' -> 466.16
