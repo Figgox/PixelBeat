@@ -6,8 +6,9 @@ function startGame() {
   const ctx = Snd.init();
   Snd.setVolume(volume);
   setTempo(mode);
+  tempoMap = mode === 2 ? TWIN_TEMPO : [[0, MODE_BPM[mode]]];
   newRun();
-  S.T0 = ctx.currentTime + 0.3 + 5 * SPB; // 5 count-in beats: READY, 3, 2, 1, GO
+  S.T0 = ctx.currentTime + 0.3 + 5 * SPB; // 5 count-in beats: READY, 3, 2, 1, GO (at the starting tempo)
   scene = 'play';
   paused = false;
   clearInterval(timer);
@@ -19,45 +20,99 @@ function stopGame() {
   timer = 0;
 }
 
+// ---------- tempo ----------
+// A run's beats map to time through a tempo map, [[from beat, bpm], ...] starting at beat 0; the count-in (beats
+// below 0) uses the first tempo. Most modes hold one tempo all the way; Twin Tap speeds up.
+let tempoMap = [[0, MODE_BPM[0]]];
+function beatTime(b) { // seconds from beat 0 (S.T0) to beat b
+  let t = 0, at = 0;
+  for (let i = 0; i < tempoMap.length; i++) {
+    const to = i + 1 < tempoMap.length ? tempoMap[i + 1][0] : Infinity, spb = 60 / tempoMap[i][1];
+    if (b <= to) return t + (b - at) * spb;
+    t += (to - at) * spb;
+    at = to;
+  }
+}
+function beatAt(sec) { // the other way: the beat sec seconds after beat 0
+  let t = 0, at = 0;
+  for (let i = 0; i < tempoMap.length; i++) {
+    const to = i + 1 < tempoMap.length ? tempoMap[i + 1][0] : Infinity, spb = 60 / tempoMap[i][1];
+    if (sec <= t + (to - at) * spb) return at + (sec - t) / spb;
+    t += (to - at) * spb;
+    at = to;
+  }
+}
+const spbAt = b => 60 / tempoMap.reduce((bpm, [from, v]) => (b >= from ? v : bpm), tempoMap[0][1]); // seconds per beat at beat b
+
 // ---------- audio scheduling ----------
 function schedule() {
   const ctx = Snd.ctx;
   const horizon = ctx.currentTime + 0.15;
   const lastStep = S.endBeat * 2;
-  while (S.step <= lastStep && S.T0 + S.step * SPB / 2 < horizon) {
+  while (S.step <= lastStep && S.T0 + beatTime(S.step / 2) < horizon) {
     scheduleStep(S.step);
     S.step++;
   }
 }
 
 function scheduleStep(s) {
-  const t = S.T0 + s * SPB / 2;
-  if (s < 0 || mode !== 1) { if (s % 2 === 0) Snd.kick(t); else Snd.hat(t); }
+  const t = S.T0 + beatTime(s / 2), spb = spbAt(s / 2); // spb: the beat's length here, for note lengths
+  if (s < 0 || mode === 0 || mode === 2) { if (s % 2 === 0) Snd.kick(t); else Snd.hat(t); }
   if (s === -8 || s === -6 || s === -4) Snd.beep(t, 660); // "3", "2", "1"
   else if (s === -2) Snd.beep(t, 880);                    // "GO!", one beat before the first call
   if (s < 0) return;
   const st = s % 8;
   if (mode === 0) {
     const ch = CHORDS[Math.floor(s / 8) % 4];
-    if (st === 0) Snd.pad(t, ch.n, SPB * 4);
-    if (st === 0 || st === 3 || st === 6) Snd.bass(t, ch.r, SPB * 0.45);
+    if (st === 0) Snd.pad(t, ch.n, spb * 4);
+    if (st === 0 || st === 3 || st === 6) Snd.bass(t, ch.r, spb * 0.45);
     if (st === 2 || st === 6) Snd.clap(t);
-    if (S.callMap.has(s)) Snd.pluck(t, S.callMap.get(s), 'cpu');
+    if (S.callMap.has(s)) Snd.pluck(t, S.callMap.get(s), 'cpu', CALL_TUNE);
   } else if (mode === 2) {
     // twin tap: four on the floor, driving eighth-note bass, soft ticks on every pulse
     const ch = CHORDS_T[Math.floor(s / 8) % 8];
-    if (st === 0) Snd.pad(t, ch.n, SPB * 4);
-    Snd.bass(t, ch.r * TWIN_BASS[st], SPB * 0.35);
+    if (st === 0) Snd.pad(t, ch.n, spb * 4);
+    Snd.bass(t, ch.r * TWIN_BASS[st], spb * 0.35);
     if (st === 2 || st === 6) Snd.clap(t);
     if (S.landMap.has(s)) Snd.tick(t);
+  } else if (mode === 3) {
+    // ping pong: arranged in sections (PONG_SECTIONS). The verse is the core groove: hats on every eighth, kick on
+    // 1 and 3 with a skip, a bouncing bass. The bot's shots and the bounces on your half are always part of the beat;
+    // your own hits play the melody.
+    const bar = Math.floor(s / 8), ch = CHORDS_P[bar % 8], part = PONG_SECTIONS[Math.floor(bar / 8)] || 'chorus', b8 = bar % 8;
+    if (st === 0) Snd.pad(t, ch.n, spb * 4);
+    if (part === 'break' && b8 < 4) {
+      // breakdown: the drums drop out, leaving the pad, off-beat hats and one long bass note per bar
+      if (st % 2 === 1) Snd.hat(t);
+      if (st === 0) Snd.bass(t, ch.r, spb * 3);
+    } else if (part === 'break') {
+      // the build: a kick on every beat, the groove's bass back in, and a clap on every eighth in the last bar
+      Snd.hat(t);
+      if (st % 2 === 0) Snd.kick(t);
+      if (b8 === 7 || st === 2 || st === 6) Snd.clap(t);
+      if (PONG_BASS[st]) Snd.bass(t, ch.r * PONG_BASS[st], spb * 0.3);
+    } else {
+      const chorus = part === 'chorus', intro = part === 'intro';
+      Snd.hat(t);
+      if (chorus ? st % 2 === 0 : st === 0 || st === 4 || (st === 5 && bar % 2 === 1)) Snd.kick(t); // chorus: four on the floor
+      if (!intro && (st === 2 || st === 6)) Snd.clap(t);
+      if (intro ? st === 0 || st === 4 : PONG_BASS[st]) Snd.bass(t, ch.r * (intro ? 1 : PONG_BASS[st]), spb * (intro ? 0.8 : 0.3));
+      if (chorus && (st === 3 || st === 6)) Snd.pad(t, ch.n, spb * 0.4); // chorus: syncopated chord stabs
+    }
+    if (S.callMap.has(s)) { // the bot's shot: a knock, and maybe a note of its part
+      const hz = PONG_BOT_TUNE[S.callMap.get(s)];
+      Snd.pock(t);
+      if (hz) Snd.pluck(t, 0, 'cpu', [hz]);
+    }
+    for (const b of S.bounceMap.get(s) || []) Snd.tock(S.T0 + beatTime(b)); // bounces can fall between half-beats
   } else {
     // bounce: its own groove - kick on 1 and 3 with a pickup, hats on the offbeats, a hopping bass line.
     // The landings tick softly and your taps play the melody.
     const bar = Math.floor(s / 8), ch = CHORDS_B[bar % 8];
     if (st % 2 === 1) Snd.hat(t);
     if (st === 0 || st === 4 || (st === 7 && bar % 2 === 1)) Snd.kick(t);
-    if (st === 0) Snd.pad(t, ch.n, SPB * 4);
-    if (BOUNCE_BASS[st]) Snd.bass(t, ch.r * BOUNCE_BASS[st], SPB * 0.4);
+    if (st === 0) Snd.pad(t, ch.n, spb * 4);
+    if (BOUNCE_BASS[st]) Snd.bass(t, ch.r * BOUNCE_BASS[st], spb * 0.4);
     if (st === 2 || st === 6) Snd.clap(t);
     if (S.landMap.has(s)) Snd.tick(t);
   }
@@ -80,20 +135,22 @@ function press(e) {
   if (scene !== 'play' || paused || S.done) return;
   const ctx = Snd.ctx;
   const t = pressClock(e);
-  const bp = (t - S.T0) / SPB;
+  const bp = beatAt(t - S.T0);
   const side = mode === 2 ? sideOf(e) : -1; // twin tap: which key/half of the screen was used
   if (side === null) return;
   let best = null, bd = Infinity;
   for (const n of S.resp) {
     if (n.judged || (mode === 2 && n.side !== side)) continue;
-    const d = Math.abs((bp - n.beat) * SPB);
+    const d = Math.abs(t - S.T0 - beatTime(n.beat));
     if (d < bd) { bd = d; best = n; }
   }
   if (mode === 0) triggerBot(player, 0);
   if (mode === 2) S.flash[side] = 1;
+  if (mode === 3) S.swing = 1;
   if (best && bd <= W_BAD) {
-    Snd.pluck(ctx.currentTime, best.idx, side === 0 ? 'cpu' : 'player', mode === 1 ? BOUNCE_SCALE : mode === 2 ? TWIN_SCALE : undefined);
-    judge(best, (bp - best.beat) * SPB);
+    Snd.pluck(ctx.currentTime, best.idx, side === 0 ? 'cpu' : 'player', MODE_SCALE[mode]);
+    if (mode === 3) Snd.pock(ctx.currentTime);
+    judge(best, t - S.T0 - beatTime(best.beat));
   } else if (mode === 0 ? inResponsePhase(bp) : bp > -1.5) {
     Snd.buzz(ctx.currentTime);
     strayPress(bp);
@@ -133,17 +190,19 @@ function judge(n, d) {
   else if (mode > 0) burst(sp.x, sp.y, label[1], 5);
   if (mode === 2) S.rings.push({ side: n.side, t: 0 });
   if (mode === 2 && n.pair && n.pair.judged && n.pair.result !== 'miss') doubleFx();
+  if (mode === 3) pongHit(n, j);
   if (mode === 0 && j === 'perfect' && !S.rounds[n.round].tainted && S.rounds[n.round].every(x => x.result === 'perfect')) perfectBarFx();
   const chain = mode === 1 && n.chain;
   if (chain && !chain.done && !chain.tainted && chain.notes.every(x => x.result === 'perfect')) { chain.done = true; bounceChainFx(); }
 }
 
-// where a hit bursts: the player bot's pad, the ball, or the side of the twin core
+// where a hit bursts: the player bot's pad, the ball, the side of the twin core, or your paddle
 function hitSpot(n) {
-  return mode === 0 ? { x: player.cx, y: 130 } : mode === 1 ? { x: S.ball.x, y: S.ball.y } : { x: n.side ? 172 : 148, y: 100 };
+  return mode === 0 ? { x: player.cx, y: 130 } : mode === 1 ? { x: S.ball.x, y: S.ball.y }
+    : mode === 2 ? { x: n.side ? 172 : 148, y: 100 } : { x: PONG_GEO.youX, y: PONG_GEO.hitY };
 }
-// where judgement text appears: by the player bot, above the ball, or above the core
-function popSpot() { return mode === 0 ? {} : mode === 1 ? { x: BALL_X, y: 40 } : { x: 160, y: 58 }; }
+// where judgement text appears: by the player bot, above the ball, above the core, or above your paddle
+function popSpot() { return mode === 0 ? {} : mode === 1 ? { x: BALL_X, y: 40 } : mode === 2 ? { x: 160, y: 58 } : { x: PONG_GEO.youX + 14, y: 64 }; }
 
 function missNote(n) {
   n.judged = true;
@@ -158,10 +217,11 @@ function accuracy() {
   const c = S.counts, total = S.resp.length + S.strays; // extra presses count against you
   return (c.perfect * WEIGHT.perfect + c.good * WEIGHT.good + c.bad * WEIGHT.bad) / total;
 }
-// mean press error in ms (negative = early); null until there is enough data
+// mean press error in ms against the music (negative = early); null until there is enough data.
+// Bounce's built-in delay is taken back out, so this is how far off you were, not how you were judged.
 function avgDelta() {
   if (S.deltas.length < 10) return null;
-  return S.deltas.reduce((a, b) => a + b, 0) / S.deltas.length;
+  return S.deltas.reduce((a, b) => a + b, 0) / S.deltas.length - (mode === 1 ? BOUNCE_DELAY_MS : 0);
 }
 // F, D, C, B, A, S, S+ - S+ is reserved for a run where every note was Perfect
 function rankOf(acc) {

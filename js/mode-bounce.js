@@ -129,8 +129,8 @@ function drawBounce(bp, P = S.path, bx = BALL_X) {
   disc(bx, by, rx - 2, Math.max(2, ry - 2), C.white);
 }
 
-// ---------- menu demos: the highlighted game plays along with the menu melody ----------
-const DEMO_X = 58, DEMO_Y = 150; // bounce ball column and the lane height, clear of the mode list
+// ---------- menu demos: the game select thumbnails play along with the menu melody ----------
+const DEMO_Y = 150; // the bounce demo's pad height
 
 // pads for the bounce demo: a hop on every beat during the intro, then one pad per melody note
 function demoPath(b) {

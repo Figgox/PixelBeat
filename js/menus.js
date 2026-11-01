@@ -9,20 +9,49 @@ function enterMenu() {
   scene = 'menu';
   Theme.start();
 }
+// back from a game (results or quit) to the game select screen
 function goMenu() {
-  scene = 'menu';
+  scene = 'select';
   setTempo(0); // the menu theme is always at the first mode's tempo
   Theme.start();
 }
-// switch between the main menu and EXTRA; the menu theme restarts because its tempo changes
-function setExtra(on) {
-  extra = on;
-  Theme.stop();
-  goMenu();
-  modeSel = on ? 0 : EXTRA_ROW;
-  menuFlash = 1;
-}
 const menuBeat = () => (Theme.running ? Theme.beat() : menuT / SPB);
+
+// pointer position in screen pixels (320x180)
+function screenPos(e) {
+  const r = view.getBoundingClientRect();
+  return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
+}
+const inBox = (p, b) => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
+
+// ---------- main menu and game select ----------
+const menuRows = () => MENU_ITEMS.map((label, i) => ({ label, x: 108, y: 98 + i * 16, w: 104, h: 10 }));
+const CARD_W = 72, CARD_H = 80, CARD_GAP = 6;
+const CARD_X0 = Math.round((W - MODES.length * (CARD_W + CARD_GAP) + CARD_GAP) / 2); // the row of cards is centred
+const gameCards = () => MODES.map((title, i) => ({ title, x: CARD_X0 + i * (CARD_W + CARD_GAP), y: 30, w: CARD_W, h: CARD_H }));
+const BACK_BTN = { x: 0, y: 0, w: 44, h: 18 };
+
+function moveSelection(dir) {
+  if (scene === 'menu') menuSel = (menuSel + MENU_ITEMS.length + dir) % MENU_ITEMS.length;
+  else modeSel = (modeSel + MODES.length + dir) % MODES.length;
+  menuFlash = 1;
+  Snd.uiMove();
+}
+
+// a tap on a row or card picks it and opens it straight away
+function menuPointer(e) {
+  const p = screenPos(e);
+  if (scene === 'menu') {
+    const i = menuRows().findIndex(b => inBox(p, { ...b, y: b.y - 4, h: b.h + 8 }));
+    if (i >= 0) { menuSel = i; onAction(e); }
+  } else if (inBox(p, BACK_BTN)) {
+    Snd.uiBack();
+    scene = 'menu';
+  } else {
+    const i = gameCards().findIndex(b => inBox(p, { ...b, h: b.h + 14 })); // the title under the thumbnail counts too
+    if (i >= 0) { modeSel = i; onAction(e); }
+  }
+}
 
 // ---------- pause menu ----------
 let pauseView = 'main', pauseSel = 0;
@@ -96,11 +125,10 @@ function pauseKey(k) {
 }
 
 function pausePointer(e) {
-  const r = view.getBoundingClientRect();
-  const x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;
+  const p = screenPos(e);
   pauseButtons().forEach((b, i) => {
-    if (x < b.x || x > b.x + b.w || y < b.y || y > b.y + b.h) return;
-    if (pauseView === 'options' && i < 2) { pauseSel = i; adjustOption(x < b.x + b.w / 2 ? -1 : 1); }
+    if (!inBox(p, b)) return;
+    if (pauseView === 'options' && i < 2) { pauseSel = i; adjustOption(p.x < b.x + b.w / 2 ? -1 : 1); }
     else activatePause(i);
   });
 }
@@ -137,11 +165,10 @@ function settingsKey(k) {
   else if (k === 'Escape') { Snd.uiBack(); scene = 'menu'; }
 }
 function settingsPointer(e) {
-  const r = view.getBoundingClientRect();
-  const x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;
+  const p = screenPos(e);
   settingsButtons().forEach((b, i) => {
-    if (x < b.x || x > b.x + b.w || y < b.y || y > b.y + b.h) return;
-    if (i < 2) { settingsSel = i; adjustSetting(x < b.x + b.w / 2 ? -1 : 1); }
+    if (!inBox(p, b)) return;
+    if (i < 2) { settingsSel = i; adjustSetting(p.x < b.x + b.w / 2 ? -1 : 1); }
     else activateSetting(i);
   });
 }
