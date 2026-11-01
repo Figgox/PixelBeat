@@ -183,10 +183,10 @@ function judge(n, d) {
   S.combo = j === 'bad' ? 0 : S.combo + 1;
   S.maxCombo = Math.max(S.maxCombo, S.combo);
   S.score += Math.round(POINTS[j] * (1 + Math.min(S.combo, 20) / 20));
-  const label = { perfect: ['PERFECT', HIT_COL], good: ['GOOD', HIT_COL], bad: ['OK', HIT_COL] }[j];
+  const label = { perfect: ['PERFECT', judgeCol('perfect')], good: ['GOOD', judgeCol('good')], bad: ['OK', judgeCol('bad')] }[j];
   pops.push({ t: label[0], col: label[1], life: 0.7, sub: j === 'perfect' ? '' : (d < 0 ? 'EARLY' : 'LATE'), ...popSpot() });
   const sp = hitSpot(n);
-  if (j === 'perfect') burst(sp.x, sp.y, C.yel, 10);
+  if (j === 'perfect') burst(sp.x, sp.y, judgeCol('perfect'), 10);
   else if (mode > 0) burst(sp.x, sp.y, label[1], 5);
   if (mode === 2) S.rings.push({ side: n.side, t: 0 });
   if (mode === 2 && n.pair && n.pair.judged && n.pair.result !== 'miss') doubleFx();

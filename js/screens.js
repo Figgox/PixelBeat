@@ -251,7 +251,7 @@ function drawResult() {
   text('BEST ' + curBests()[mode], 220, 76, '#b79cff', 1, 'center');
   if (S.unlockMsg) text('NEW MODE UNLOCKED: ' + S.unlockMsg + '!', 160, 36, [C.grn, C.yel][Math.floor(menuT * 4) % 2], 1, 'center');
   else text(MODES[mode] + (extra ? ' EXTRA' : ''), 160, 36, extra ? C.yel : '#8a7ab0', 1, 'center');
-  const rows = [['PERFECT', 'perfect', HIT_COL], ['GOOD', 'good', HIT_COL], ['OK', 'bad', HIT_COL], ['MISS', 'miss', C.red]];
+  const rows = [['PERFECT', 'perfect', judgeCol('perfect')], ['GOOD', 'good', judgeCol('good')], ['OK', 'bad', judgeCol('bad')], ['MISS', 'miss', C.red]];
   rows.forEach((r, i) => {
     text(r[0], 100, 100 + i * 8, r[2], 1);
     text(S.counts[r[1]], 220, 100 + i * 8, r[2], 1, 'right');
