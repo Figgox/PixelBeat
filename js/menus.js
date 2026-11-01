@@ -14,6 +14,14 @@ function goMenu() {
   setTempo(0); // the menu theme is always at the first mode's tempo
   Theme.start();
 }
+// switch between the main menu and EXTRA; the menu theme restarts because its tempo changes
+function setExtra(on) {
+  extra = on;
+  Theme.stop();
+  goMenu();
+  modeSel = on ? 0 : EXTRA_ROW;
+  menuFlash = 1;
+}
 const menuBeat = () => (Theme.running ? Theme.beat() : menuT / SPB);
 
 // ---------- pause menu ----------

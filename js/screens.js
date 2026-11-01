@@ -3,6 +3,7 @@
 
 function drawHud(bp) {
   text('SCORE ' + String(S.score).padStart(6, '0'), 6, 6, C.white, 1);
+  if (extra) text('EXTRA ' + EXTRA_BPM[mode] + ' BPM', 6, 14, C.yel, 1);
   if (S.combo >= 3) text(S.combo + ' COMBO', W - 6, 6, C.yel, 1, 'right');
   rect(0, 0, W, 2, '#1d1038');
   rect(0, 0, Math.round(W * Math.max(0, Math.min(1, bp / S.endBeat))), 2, C.cyan);
@@ -56,7 +57,7 @@ function drawMenu() {
   // the backdrop previews whichever mode is highlighted; a locked one shows only drifting padlocks
   const lockedSel = isLockedMode(modeSel);
   if (lockedSel) drawLockedBackground(bp);
-  else if (modeSel === SETTINGS_ROW) drawGearBackground(bp);
+  else if (modeSel === SETTINGS_ROW && !extra) drawGearBackground(bp);
   else if (modeSel === 1) drawBounceBackground(bp);
   else if (modeSel === 2) drawTwinBackground(bp);
   else drawBackground(bp);
@@ -74,26 +75,39 @@ function drawMenu() {
   drawParts();
   drawLogo();
 
-  if (!lockedSel && Math.floor(menuT * 2) % 2 === 0) text(modeSel === SETTINGS_ROW ? 'PRESS SPACE TO OPEN' : 'PRESS SPACE TO START', 160, 82, C.white, 2, 'center');
-  g.globalAlpha = 0.65; rect(98, 103, 124, 41, '#07030f'); g.globalAlpha = 1; // stays clear of the robots on either side
-  [...MODES, 'SETTINGS'].forEach((m, i) => {
-    const sel = i === modeSel, y = i === SETTINGS_ROW ? 135 : 107 + i * 9;
+  const onBack = extra && modeSel === SETTINGS_ROW, onSettings = !extra && modeSel === SETTINGS_ROW, onExtra = modeSel === EXTRA_ROW;
+  if (!lockedSel && Math.floor(menuT * 2) % 2 === 0) text(onSettings || onExtra ? 'PRESS SPACE TO OPEN' : onBack ? 'PRESS SPACE TO GO BACK' : 'PRESS SPACE TO START', 160, 82, C.white, 2, 'center');
+  if (extra) text('EXTRA', 160, 94, C.yel, 1, 'center');
+  const rows = [...MODES, extra ? 'BACK' : 'SETTINGS', ...(!extra && extraUnlocked() ? ['EXTRA'] : [])];
+  g.globalAlpha = 0.65; rect(98, 103, 124, rows.length > 4 ? 50 : 41, '#07030f'); g.globalAlpha = 1; // stays clear of the robots on either side
+  const ranks = curRanks();
+  rows.forEach((m, i) => {
+    const sel = i === modeSel, y = i < SETTINGS_ROW ? 107 + i * 9 : 135 + (i - SETTINGS_ROW) * 9;
     const isMode = i < MODES.length, locked = isLockedMode(i);
-    const col = locked ? (sel ? '#8a7ab0' : '#4a3a7a') : (sel ? C.yel : C.white);
+    let col = locked ? (sel ? '#8a7ab0' : '#4a3a7a') : (sel ? C.yel : C.white);
+    if (i === EXTRA_ROW) { // the glowing EXTRA option
+      const pulse = 0.5 + 0.5 * Math.sin(menuT * 5);
+      g.globalAlpha = 0.12 + 0.28 * pulse; rect(100, y - 2, 120, 9, C.mag); g.globalAlpha = 1;
+      col = mix(C.yel, C.white, pulse);
+      text((sel ? '> ' : '  ') + m + ' *', 102, y, col, 1);
+      return;
+    }
     text((sel ? '> ' : '  ') + m, 102, y, col, 1);
     if (locked) drawPadlock(211, y - 1, 1, col); // a padlock where the best rank would be
-    else if (isMode && bestRanks[i] >= 0) text(RANKS[bestRanks[i]], 218, y, RANK_COL[RANKS[bestRanks[i]]], 1, 'right'); // best rank so far
+    else if (isMode && ranks[i] >= 0) text(RANKS[ranks[i]], 218, y, RANK_COL[RANKS[ranks[i]]], 1, 'right'); // best rank so far
   });
   g.globalAlpha = 0.65; rect(0, 156, W, 24, '#07030f'); g.globalAlpha = 1;
-  if (modeSel === SETTINGS_ROW) text('DELAY, VOLUME AND CALIBRATION.', 160, 159, '#b79cff', 1, 'center');
+  if (onSettings) text('DELAY, VOLUME AND CALIBRATION.', 160, 159, '#b79cff', 1, 'center');
+  else if (onBack) text('BACK TO THE MAIN MENU.', 160, 159, '#b79cff', 1, 'center');
+  else if (onExtra) text('ALL THREE GAMES AGAIN, BUT FASTER.', 160, 159, C.yel, 1, 'center');
   else if (modeSel >= PLAYABLE) text('THIS MODE IS STILL IN THE WORKS.', 160, 159, '#b79cff', 1, 'center');
-  else if (!isUnlocked(modeSel)) {
+  else if (isLockedMode(modeSel)) {
     const msg = 'GET A C OR BETTER IN ' + MODES[modeSel - 1] + '.', x0 = 160 - Math.round((msg.length * 4 - 1) / 2);
     drawPadlock(x0 - 11, 158, 1, '#ff6b8a');
     text(msg, x0, 159, '#ff6b8a', 1);
   }
-  else text(MODE_HINT[modeSel], 160, 159, '#b79cff', 1, 'center');
-  text('OFFSET ' + signed(offsetMs) + ' MS  <LEFT/RIGHT>' + (modeSel < MODES.length ? '   BEST ' + bests[modeSel] : ''), 160, 169, '#8a7ab0', 1, 'center');
+  else text(extra ? EXTRA_BPM[modeSel] + ' BPM  (NORMAL ' + MODE_BPM[modeSel] + ')' : MODE_HINT[modeSel], 160, 159, extra ? C.yel : '#b79cff', 1, 'center');
+  text('OFFSET ' + signed(offsetMs) + ' MS  <LEFT/RIGHT>' + (modeSel < MODES.length ? '   BEST ' + curBests()[modeSel] : ''), 160, 169, '#8a7ab0', 1, 'center');
 }
 
 // ---------- settings and calibration screens ----------
@@ -199,9 +213,9 @@ function drawResult() {
   text('SCORE ' + S.score, 220, 46, C.white, 1, 'center');
   text('ACCURACY ' + Math.round(acc * 100) + '%', 220, 56, C.white, 1, 'center');
   text('MAX COMBO ' + S.maxCombo, 220, 66, C.white, 1, 'center');
-  text('BEST ' + bests[mode], 220, 76, '#b79cff', 1, 'center');
+  text('BEST ' + curBests()[mode], 220, 76, '#b79cff', 1, 'center');
   if (S.unlockMsg) text('NEW MODE UNLOCKED: ' + S.unlockMsg + '!', 160, 36, [C.grn, C.yel][Math.floor(menuT * 4) % 2], 1, 'center');
-  else text(MODES[mode], 160, 36, '#8a7ab0', 1, 'center');
+  else text(MODES[mode] + (extra ? ' EXTRA' : ''), 160, 36, extra ? C.yel : '#8a7ab0', 1, 'center');
   const rows = [['PERFECT', 'perfect', C.yel], ['GOOD', 'good', C.cyan], ['OK', 'bad', '#b79cff'], ['MISS', 'miss', C.red]];
   rows.forEach((r, i) => {
     text(r[0], 100, 100 + i * 8, r[2], 1);
@@ -217,7 +231,11 @@ function drawResult() {
   text('SPACE: CONTINUE    R: RETRY', 160, 156, C.white, 1, 'center');
 }
 
+let appliedFilter = '';
 function present() {
+  // EXTRA's colour scheme is a hue shift on the finished picture; the EXTRA menu row previews it
+  const want = extra || (scene === 'menu' && modeSel === EXTRA_ROW) ? EXTRA_FILTER : '';
+  if (want !== appliedFilter) { view.style.transition = 'filter 0.25s'; view.style.filter = appliedFilter = want; }
   vg.globalCompositeOperation = 'source-over';
   vg.globalAlpha = 1;
   vg.filter = 'none';

@@ -3,11 +3,18 @@
 
 // ---------- state ----------
 let scene = 'title', modeSel = 0, mode = 0, paused = false;
+let extra = false; // true while inside the EXTRA menu and its faster runs
 let offsetMs = load('offset', 0);
 const bests = [load('best', 0), load('best1', 0), load('best2', 0)]; // best score per mode
 const bestRanks = [load('rank0', -1), load('rank1', -1), load('rank2', -1)]; // best rank index per mode (-1 = never finished)
+const xBests = [0, 1, 2].map(m => load('xbest' + m, 0)); // EXTRA keeps its own scores and ranks
+const xRanks = [0, 1, 2].map(m => load('xrank' + m, -1));
+const curBests = () => (extra ? xBests : bests);
+const curRanks = () => (extra ? xRanks : bestRanks);
 const isUnlocked = m => m === 0 || bestRanks[m - 1] >= UNLOCK_RANK;
-const isLockedMode = m => m < MODES.length && (m >= PLAYABLE || !isUnlocked(m)); // false for the settings row
+const extraUnlocked = () => bestRanks.slice(0, PLAYABLE).every(r => r >= UNLOCK_RANK); // a C or better in every game
+const isLockedMode = m => m < MODES.length && (m >= PLAYABLE || (!extra && !isUnlocked(m))); // false for the settings/extra rows
+const menuRows = () => MODES.length + 1 + (!extra && extraUnlocked() ? 1 : 0);
 let volume = load('volume', 0.8);
 // a brand-new player (nothing saved yet, no calibration done) is taken through calibration before the menu
 let needsCalibration = load('calibrated', 0) === 0 && load('offset', null) === null;

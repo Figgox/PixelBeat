@@ -5,14 +5,19 @@ function onAction(e) {
   if (scene === 'title') { enterMenu(); return; }
   Snd.init();
   if (scene === 'menu') {
-    if (modeSel === SETTINGS_ROW) { Snd.uiSelect(); settingsSel = 0; scene = 'settings'; return; }
+    if (modeSel === EXTRA_ROW && !extra) { Snd.uiSelect(); setExtra(true); return; }
+    if (modeSel === SETTINGS_ROW) {
+      Snd.uiSelect();
+      if (extra) setExtra(false); else { settingsSel = 0; scene = 'settings'; } // inside EXTRA this row is BACK
+      return;
+    }
     if (modeSel >= PLAYABLE) return;
-    if (!isUnlocked(modeSel)) Snd.buzz(Snd.ctx.currentTime);
+    if (isLockedMode(modeSel)) Snd.buzz(Snd.ctx.currentTime);
     else { Snd.uiSelect(); mode = modeSel; startGame(); }
   } else if (scene === 'result') {
     if (performance.now() - S.resultAt < 600) return; // a late tap from the song shouldn't skip the results
     Snd.uiSelect();
-    if (S.unlockMsg) modeSel = mode + 1; // land on the mode you just unlocked
+    if (S.unlockMsg) modeSel = S.unlockMsg === 'EXTRA' ? EXTRA_ROW : mode + 1; // land on what you just unlocked
     goMenu();
   } else if (scene === 'calibrate') {
     if (cal.phase === 'run') calTap(e);
@@ -30,9 +35,10 @@ addEventListener('keydown', e => {
   if (scene === 'title') {
     if (!['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) enterMenu();
   } else if (scene === 'menu') {
-    const rows = MODES.length + 1;
+    const rows = menuRows();
     if (k === 'ArrowUp') { modeSel = (modeSel + rows - 1) % rows; menuFlash = 1; Snd.uiMove(); }
     else if (k === 'ArrowDown') { modeSel = (modeSel + 1) % rows; menuFlash = 1; Snd.uiMove(); }
+    else if (k === 'Escape' && extra) { Snd.uiBack(); setExtra(false); }
     else if (k === 'ArrowLeft') adjustOffset(-1);
     else if (k === 'ArrowRight') adjustOffset(1);
     else if (k === 'Space' || k === 'Enter') onAction(e);

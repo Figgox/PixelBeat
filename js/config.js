@@ -10,7 +10,8 @@ const C = {
 // ---------- level ----------
 const MODE_BPM = [120, 128, 140];
 let SPB = 60 / MODE_BPM[0]; // seconds per beat; follows the current mode's tempo (see setTempo)
-const setTempo = m => { SPB = 60 / MODE_BPM[m]; };
+const EXTRA_BPM = [150, 160, 175]; // the EXTRA challenge: the same three games, faster
+const setTempo = m => { SPB = 60 / (extra ? EXTRA_BPM : MODE_BPM)[m]; };
 // Each round: the beats (0-3.5) within a 4-beat phrase the bot plays, then you repeat.
 const ROUNDS = [
   [0, 1, 2, 3], [0, 1, 2, 3], [0, 2, 3], [0, 1, 3],
@@ -31,7 +32,9 @@ const POINTS = { perfect: 100, good: 60, bad: 20 };
 const WEIGHT = { perfect: 1, good: 0.7, bad: 0.35, miss: 0 };
 const MODES = ['CALL & RESPONSE', 'BOUNCE', 'TWIN TAP'];
 const PLAYABLE = 3; // modes at or beyond this index are still "soon"
-const SETTINGS_ROW = MODES.length; // the menu row after the modes opens the settings screen
+const SETTINGS_ROW = MODES.length; // the menu row after the modes opens the settings screen (or goes BACK inside EXTRA)
+const EXTRA_ROW = MODES.length + 1; // appears once every game has been cleared with a C
+const EXTRA_FILTER = 'hue-rotate(-75deg) saturate(1.15)'; // EXTRA's colour scheme: the neon purples and pinks turn to teal and green
 // Progression: each mode unlocks once the one before it has been cleared with at least this rank.
 const RANKS = ['F', 'D', 'C', 'B', 'A', 'S', 'S+'];
 const UNLOCK_RANK = RANKS.indexOf('C');
