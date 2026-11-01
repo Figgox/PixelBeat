@@ -10,7 +10,8 @@ const C = {
 // ---------- level ----------
 const MODE_BPM = [120, 128, 140, 160];
 let SPB = 60 / MODE_BPM[0]; // seconds per beat; follows the current mode's tempo (see setTempo)
-const setTempo = m => { SPB = 60 / MODE_BPM[m]; };
+const EXTRA_BPM = [150, 160, 175, 190]; // the EXTRA challenge: the same games, faster
+const setTempo = m => { SPB = 60 / (extra ? EXTRA_BPM : MODE_BPM)[m]; };
 const noteHz = n => { // 'F#5' -> 739.99, 'Bb4' -> 466.16
   const [, letter, acc, oct] = n.match(/^([A-G])([#b]?)(\d)$/);
   return 440 * 2 ** (('C.D.EF.G.A.B'.indexOf(letter) + (acc === '#' ? 1 : acc === 'b' ? -1 : 0) + 12 * (+oct + 1) - 69) / 12);
@@ -49,7 +50,9 @@ const WEIGHT = { perfect: 1, good: 0.7, bad: 0.35, miss: 0 };
 const MODES = ['CALL & RESPONSE', 'BOUNCE', 'TWIN TAP', 'PING PONG'];
 const PLAYABLE = 4; // modes at or beyond this index are still "soon"
 const MENU_ITEMS = ['PLAY', 'SETTINGS']; // the main menu; PLAY opens the game select screen
-const MENU_HINT = ['CHOOSE A GAME AND PLAY.', 'DELAY, VOLUME AND CALIBRATION.'];
+const EXTRA_ITEM = 2; // the glowing EXTRA row, added to the main menu once every game has a C or better
+const EXTRA_FILTER = 'hue-rotate(-75deg) saturate(1.15)'; // EXTRA's colour scheme: the neon purples and pinks turn to teal and green
+const MENU_HINT = ['CHOOSE A GAME AND PLAY.', 'DELAY, VOLUME AND CALIBRATION.', 'ALL THE GAMES AGAIN, BUT FASTER.'];
 // Progression: each mode unlocks once the one before it has been cleared with at least this rank.
 const RANKS = ['F', 'D', 'C', 'B', 'A', 'S', 'S+'];
 const UNLOCK_RANK = RANKS.indexOf('C');

@@ -2,12 +2,18 @@
 // Global game state (scene, settings, scores, current run) and building a run.
 
 // ---------- state ----------
+let extra = false; // true while inside EXTRA: the same games at a higher BPM, with their own scores
 let scene = 'title', menuSel = 0, modeSel = 0, mode = 0, paused = false; // menuSel: main menu row, modeSel: game select card
 let offsetMs = load('offset', 0);
 const bests = MODES.map((_, m) => load(m ? 'best' + m : 'best', 0)); // best score per mode
 const bestRanks = MODES.map((_, m) => load('rank' + m, -1)); // best rank index per mode (-1 = never finished)
+const xBests = MODES.map((_, m) => load('xbest' + m, 0)); // EXTRA keeps its own scores and ranks
+const xRanks = MODES.map((_, m) => load('xrank' + m, -1));
+const curBests = () => (extra ? xBests : bests);
+const curRanks = () => (extra ? xRanks : bestRanks);
 const isUnlocked = m => m === 0 || bestRanks[m - 1] >= UNLOCK_RANK;
-const isLockedMode = m => m >= PLAYABLE || !isUnlocked(m);
+const extraUnlocked = () => bestRanks.slice(0, PLAYABLE).every(r => r >= UNLOCK_RANK); // a C or better in every game
+const isLockedMode = m => m >= PLAYABLE || (!extra && !isUnlocked(m));
 let volume = load('volume', 0.8);
 // a brand-new player (nothing saved yet, no calibration done) is taken through calibration before the menu
 let needsCalibration = load('calibrated', 0) === 0 && load('offset', null) === null;
@@ -16,7 +22,7 @@ let timer = 0;
 
 function newRun() {
   Object.assign(S, {
-    T0: 0,
+    T0: 0, unlockMsg: null,
     step: -8, // the READY beat (-5 to -4) is silent; sound starts on "3"
     calls: [], resp: [], callMap: new Map(), landMap: new Set(), path: [],
     ball: { x: BALL_X, y: 110 },

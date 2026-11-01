@@ -6,15 +6,15 @@ function onAction(e) {
   Snd.init();
   if (scene === 'menu') {
     Snd.uiSelect();
-    if (menuSel === 1) { settingsSel = 0; scene = 'settings'; } else scene = 'select';
+    if (menuSel === 1) { settingsSel = 0; scene = 'settings'; } else if (menuSel === EXTRA_ITEM) setExtra(true); else scene = 'select';
   } else if (scene === 'select') {
     if (modeSel >= PLAYABLE) return;
-    if (!isUnlocked(modeSel)) Snd.buzz(Snd.ctx.currentTime);
+    if (isLockedMode(modeSel)) Snd.buzz(Snd.ctx.currentTime);
     else { Snd.uiSelect(); mode = modeSel; startGame(); }
   } else if (scene === 'result') {
     if (performance.now() - S.resultAt < 600) return; // a late tap from the song shouldn't skip the results
     Snd.uiSelect();
-    if (S.unlockMsg) modeSel = mode + 1; // land on the mode you just unlocked
+    if (S.unlockMsg && S.unlockMsg !== 'EXTRA') modeSel = mode + 1; // land on the mode you just unlocked
     goMenu();
   } else if (scene === 'calibrate') {
     if (cal.phase === 'run') calTap(e);
@@ -40,7 +40,7 @@ addEventListener('keydown', e => {
   } else if (scene === 'select') {
     if (k === 'ArrowLeft' || k === 'KeyA') moveSelection(-1);
     else if (k === 'ArrowRight' || k === 'KeyD') moveSelection(1);
-    else if (k === 'Escape' || k === 'Backspace') { Snd.uiBack(); scene = 'menu'; }
+    else if (k === 'Escape' || k === 'Backspace') leaveSelect();
     else if (k === 'Space' || k === 'Enter') onAction(e);
   } else if (scene === 'settings') {
     settingsKey(k);
