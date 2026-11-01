@@ -236,7 +236,8 @@ function drawPlay() {
 
 function drawResult() {
   const bp = menuT / SPB;
-  drawBackground(bp);
+  if (mode === 1) drawBounceBackground(bp); else if (mode === 2) drawTwinBackground(bp);
+  else if (mode === 3) drawPongBackground(bp, false); else drawBackground(bp); // the backdrop of the game you just played
   const acc = accuracy(), rank = rankOf(acc);
   g.globalAlpha = 0.75; rect(40, 14, 240, 152, '#07030f'); g.globalAlpha = 1;
   g.strokeStyle = C.mag; g.lineWidth = 1; g.strokeRect(40.5, 14.5, 239, 151);
