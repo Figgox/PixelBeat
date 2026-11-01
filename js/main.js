@@ -38,12 +38,15 @@ function update(dt) {
     S.done = true;
     S.doneAt = performance.now();
     stopGame();
-    bests[mode] = Math.max(bests[mode], S.score);
-    save(mode ? 'best' + mode : 'best', bests[mode]);
-    const nextWasLocked = mode + 1 < PLAYABLE && !isUnlocked(mode + 1);
-    bestRanks[mode] = Math.max(bestRanks[mode], RANKS.indexOf(rankOf(accuracy())));
-    save('rank' + mode, bestRanks[mode]);
-    S.unlockMsg = nextWasLocked && isUnlocked(mode + 1) ? MODES[mode + 1] : null; // announced on the results screen
+    const B = curBests(), R = curRanks(), pre = extra ? 'x' : '';
+    B[mode] = Math.max(B[mode], S.score);
+    save(pre + (mode || extra ? 'best' + mode : 'best'), B[mode]);
+    const nextWasLocked = !extra && mode + 1 < PLAYABLE && !isUnlocked(mode + 1);
+    const extraWasLocked = !extra && !extraUnlocked();
+    R[mode] = Math.max(R[mode], RANKS.indexOf(rankOf(accuracy())));
+    save(pre + 'rank' + mode, R[mode]);
+    // announced on the results screen
+    S.unlockMsg = nextWasLocked && isUnlocked(mode + 1) ? MODES[mode + 1] : extraWasLocked && extraUnlocked() ? 'EXTRA' : null;
   }
   if (S.done && performance.now() - S.doneAt > 1500) { scene = 'result'; S.resultAt = performance.now(); }
 }

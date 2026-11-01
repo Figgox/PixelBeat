@@ -3,6 +3,7 @@
 
 function drawHud(bp) {
   text('SCORE ' + String(S.score).padStart(6, '0'), 6, 6, C.white, 1);
+  if (extra) text('EXTRA ' + EXTRA_BPM[mode] + ' BPM', 6, 14, C.yel, 1);
   if (S.combo >= 3) text(S.combo + (mode === 3 ? ' RALLY' : ' COMBO'), W - 6, 6, C.yel, 1, 'right');
   rect(0, 0, W, 2, '#1d1038');
   rect(0, 0, Math.round(W * Math.max(0, Math.min(1, bp / S.endBeat))), 2, C.cyan);
@@ -65,10 +66,17 @@ function drawMenu() {
   drawParts();
   drawLogo();
 
-  g.globalAlpha = 0.65; rect(108, 92, 104, 38, '#07030f'); g.globalAlpha = 1; // stays clear of the robots on either side
-  menuRows().forEach((r, i) => {
+  const rows = menuRows();
+  g.globalAlpha = 0.65; rect(108, 89, 104, rows.length > 2 ? 54 : 41, '#07030f'); g.globalAlpha = 1; // stays clear of the robots on either side
+  rows.forEach((r, i) => {
     const sel = i === menuSel, hw = (r.label.length * 8 - 2) / 2;
-    text(r.label, 160, r.y, sel ? C.yel : C.white, 2, 'center');
+    let col = sel ? C.yel : C.white;
+    if (i === EXTRA_ITEM) { // the glowing EXTRA option
+      const pulse = 0.5 + 0.5 * Math.sin(menuT * 5);
+      g.globalAlpha = 0.12 + 0.28 * pulse; rect(r.x, r.y - 3, r.w, 15, C.mag); g.globalAlpha = 1;
+      if (!sel) col = mix(C.yel, C.white, pulse);
+    }
+    text(r.label, 160, r.y, col, 2, 'center');
     if (sel) { text('>', 160 - hw - 12, r.y, C.yel, 2); text('<', 160 + hw + 6, r.y, C.yel, 2); }
   });
   g.globalAlpha = 0.65; rect(0, 156, W, 24, '#07030f'); g.globalAlpha = 1;
@@ -101,8 +109,9 @@ function drawSelect() {
   const bp = menuBeat();
   drawBackground(bp);
   g.globalAlpha = 0.6; rect(0, 0, W, H, '#05020c'); g.globalAlpha = 1;
-  text('SELECT GAME', 161, 9, C.mag, 2, 'center');
-  text('SELECT GAME', 160, 8, C.cyan, 2, 'center');
+  const title = extra ? 'EXTRA GAMES' : 'SELECT GAME';
+  text(title, 161, 9, C.mag, 2, 'center');
+  text(title, 160, 8, C.cyan, 2, 'center');
   text('< BACK', 6, 6, '#8a7ab0', 1);
 
   gameCards().forEach((c, i) => {
@@ -112,8 +121,8 @@ function drawSelect() {
     else if (menuFlash > 0) { g.globalAlpha = menuFlash * 0.4; rect(c.x, y, c.w, c.h, C.white); g.globalAlpha = 1; }
     g.strokeStyle = sel ? C.yel : '#4a3a7a'; g.lineWidth = 1;
     g.strokeRect(c.x - 0.5, y - 0.5, c.w + 1, c.h + 1);
-    if (!locked && bestRanks[i] >= 0) { // best rank so far, in the corner
-      const r = RANKS[bestRanks[i]], w = r.length * 4 + 3;
+    if (!locked && curRanks()[i] >= 0) { // best rank so far, in the corner
+      const r = RANKS[curRanks()[i]], w = r.length * 4 + 3;
       rect(c.x + c.w - w - 2, y + 2, w, 9, '#07030f');
       text(r, c.x + c.w - 4, y + 4, RANK_COL[r], 1, 'right');
     }
@@ -127,7 +136,7 @@ function drawSelect() {
     text(msg, x0, 134, '#ff6b8a', 1);
   } else {
     text(MODE_HINT[modeSel], 160, 134, '#b79cff', 1, 'center');
-    text('BEST ' + bests[modeSel], 160, 146, '#8a7ab0', 1, 'center');
+    text((extra ? EXTRA_BPM[modeSel] + ' BPM (NORMAL ' + MODE_BPM[modeSel] + ')   ' : '') + 'BEST ' + curBests()[modeSel], 160, 146, extra ? C.yel : '#8a7ab0', 1, 'center');
   }
   text('<LEFT/RIGHT> CHOOSE    SPACE: PLAY    ESC: BACK', 160, 168, '#8a7ab0', 1, 'center');
 }
@@ -238,9 +247,9 @@ function drawResult() {
   text('SCORE ' + S.score, 220, 46, C.white, 1, 'center');
   text('ACCURACY ' + Math.round(acc * 100) + '%', 220, 56, C.white, 1, 'center');
   text('MAX COMBO ' + S.maxCombo, 220, 66, C.white, 1, 'center');
-  text('BEST ' + bests[mode], 220, 76, '#b79cff', 1, 'center');
+  text('BEST ' + curBests()[mode], 220, 76, '#b79cff', 1, 'center');
   if (S.unlockMsg) text('NEW MODE UNLOCKED: ' + S.unlockMsg + '!', 160, 36, [C.grn, C.yel][Math.floor(menuT * 4) % 2], 1, 'center');
-  else text(MODES[mode], 160, 36, '#8a7ab0', 1, 'center');
+  else text(MODES[mode] + (extra ? ' EXTRA' : ''), 160, 36, extra ? C.yel : '#8a7ab0', 1, 'center');
   const rows = [['PERFECT', 'perfect', C.yel], ['GOOD', 'good', C.cyan], ['OK', 'bad', '#b79cff'], ['MISS', 'miss', C.red]];
   rows.forEach((r, i) => {
     text(r[0], 100, 100 + i * 8, r[2], 1);
@@ -256,7 +265,11 @@ function drawResult() {
   text('SPACE: CONTINUE    R: RETRY', 160, 156, C.white, 1, 'center');
 }
 
+let appliedFilter = '';
 function present() {
+  // EXTRA's colour scheme is a hue shift on the finished picture; the EXTRA menu row previews it
+  const want = extra || (scene === 'menu' && menuSel === EXTRA_ITEM) ? EXTRA_FILTER : '';
+  if (want !== appliedFilter) { view.style.transition = 'filter 0.25s'; view.style.filter = appliedFilter = want; }
   vg.globalCompositeOperation = 'source-over';
   vg.globalAlpha = 1;
   vg.filter = 'none';

@@ -11,9 +11,25 @@ function enterMenu() {
 }
 // back from a game (results or quit) to the game select screen
 function goMenu() {
-  scene = 'select';
+  if (!extra && S.unlockMsg === 'EXTRA') { scene = 'menu'; menuSel = EXTRA_ITEM; } // land on the newly unlocked EXTRA
+  else scene = 'select';
   setTempo(0); // the menu theme is always at the first mode's tempo
   Theme.start();
+}
+// enter or leave EXTRA; the menu theme restarts because its tempo changes
+function setExtra(on) {
+  extra = on;
+  Theme.stop();
+  setTempo(0);
+  scene = on ? 'select' : 'menu';
+  if (on) modeSel = 0; else menuSel = EXTRA_ITEM;
+  menuFlash = 1;
+  Theme.start();
+}
+// back from game select: to the main menu, or out of EXTRA
+function leaveSelect() {
+  Snd.uiBack();
+  if (extra) setExtra(false); else scene = 'menu';
 }
 const menuBeat = () => (Theme.running ? Theme.beat() : menuT / SPB);
 
@@ -25,14 +41,15 @@ function screenPos(e) {
 const inBox = (p, b) => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
 
 // ---------- main menu and game select ----------
-const menuRows = () => MENU_ITEMS.map((label, i) => ({ label, x: 108, y: 98 + i * 16, w: 104, h: 10 }));
+const menuItems = () => (extraUnlocked() ? [...MENU_ITEMS, 'EXTRA'] : MENU_ITEMS);
+const menuRows = () => menuItems().map((label, i, a) => ({ label, x: 108, y: a.length > 2 ? 95 + i * 14 : 98 + i * 16, w: 104, h: 10 }));
 const CARD_W = 72, CARD_H = 80, CARD_GAP = 6;
 const CARD_X0 = Math.round((W - MODES.length * (CARD_W + CARD_GAP) + CARD_GAP) / 2); // the row of cards is centred
 const gameCards = () => MODES.map((title, i) => ({ title, x: CARD_X0 + i * (CARD_W + CARD_GAP), y: 30, w: CARD_W, h: CARD_H }));
 const BACK_BTN = { x: 0, y: 0, w: 44, h: 18 };
 
 function moveSelection(dir) {
-  if (scene === 'menu') menuSel = (menuSel + MENU_ITEMS.length + dir) % MENU_ITEMS.length;
+  if (scene === 'menu') menuSel = (menuSel + menuItems().length + dir) % menuItems().length;
   else modeSel = (modeSel + MODES.length + dir) % MODES.length;
   menuFlash = 1;
   Snd.uiMove();
@@ -45,8 +62,7 @@ function menuPointer(e) {
     const i = menuRows().findIndex(b => inBox(p, { ...b, y: b.y - 4, h: b.h + 8 }));
     if (i >= 0) { menuSel = i; onAction(e); }
   } else if (inBox(p, BACK_BTN)) {
-    Snd.uiBack();
-    scene = 'menu';
+    leaveSelect();
   } else {
     const i = gameCards().findIndex(b => inBox(p, { ...b, h: b.h + 14 })); // the title under the thumbnail counts too
     if (i >= 0) { modeSel = i; onAction(e); }
