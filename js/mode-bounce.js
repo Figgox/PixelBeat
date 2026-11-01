@@ -96,7 +96,7 @@ function ballAt(beat, P = S.path) {
   return { y: a.y + (b.y - a.y) * u - arc - 6, squash: Math.max(0, 1 - near / 0.12) };
 }
 
-const JUDGE_COL = { perfect: C.yel, good: C.white, bad: '#b79cff', miss: C.red };
+const JUDGE_COL = { perfect: HIT_COL, good: HIT_COL, bad: HIT_COL, miss: C.red };
 
 // P and bx are only overridden by the menu demo
 function drawBounce(bp, P = S.path, bx = BALL_X) {
